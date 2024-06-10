@@ -1,0 +1,5 @@
+{
+    "title": "My Blog",
+    "type": "blog",
+    "plugins": ["formlessly"]
+}
