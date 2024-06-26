@@ -11,6 +11,7 @@ const port = 1820;
 
 const server = createServer(async (req, res) => {
     res.statusCode = 200;
+    
     const pathname = url.parse(req.url).pathname;
     console.log(pathname) 
 
@@ -26,19 +27,32 @@ const server = createServer(async (req, res) => {
         const pagePath = '/Users/Chris/dev/simply/web/pages/about/about.html'
         const pageFolderPath = '/Users/Chris/dev/simply/web/pages/about'
 
-        const getContent = new Promise(async (resolve, rej) => {
-            const scripts= await fs.readFile(`${pageFolderPath}/script.js`)
-            const pageContent =  await fs.readFile(pagePath, 'utf8')
-            resolve([scripts, pageContent])
-        })
+        if (req.url === '/script.js') {
+            new Promise(async (resolve) => {
+                const scripts = await fs.readFile(`${pageFolderPath}/script.js`)  
+                resolve(scripts)
+            }).then(result => {
+                res.writeHead(200, { 'Content-Type': 'application/javascript' });
+                res.end(result);
+            })
+            
+        } else {
+            const getContent = new Promise(async (resolve, rej) => {
+                const scripts = await fs.readFile(`${pageFolderPath}/script.js`)  
+                const pageContent =  await fs.readFile(pagePath, 'utf8')
+                resolve([scripts, pageContent])
+            })
 
-        getContent.then(([scripts, output]) => {
-            const func = scriptString(scripts, output)
-            const pageContent = eval(func)()
+            getContent.then(([scripts, output]) => {
+                const func = scriptString(scripts, output)
+                const pageContent = eval(func)()
 
-            res.write(`<script>${scripts}</script>`)
-            res.end(`<div id='simply-app'>${pageContent}</div>`);
-        })
+                
+                res.write(`<div id='simply-app'>${pageContent}</div>`);
+                res.end(`\n<script src="/script.js"></script>`)
+            })
+        }
+
         
     });
 
@@ -56,10 +70,11 @@ const scriptString = (scripts, output) => {
     // Removes html comments
     output = output.replace(/<\!--.*?-->/g, "");
 
-            return `() => {
-                ${scripts}
-            return (\`
+    return `() => {
+        ${scripts}
+        return (\`
             ${ output }
             \`
-        )}`
-        }
+        )
+    }`
+}
