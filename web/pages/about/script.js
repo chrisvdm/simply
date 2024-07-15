@@ -28,3 +28,5 @@
 const onFooButtonClick = () => {
     console.log("This comes the adjacent script file")
 }
+
+const name = 'chris'
