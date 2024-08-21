@@ -4,6 +4,7 @@
 // const isolate = new ivm.Isolate({ memoryLimit: 128 }); 
 
 const fs = require('node:fs/promises');
+const { existsSync } = require('node:fs')
 const url = require('node:url')
 const path = require("node:path");
 const { createServer } = require('node:http');
@@ -29,6 +30,7 @@ const server = createServer(async (req, res) => {
         }
 
         if (req.url === '/script.js') {
+            // Fetches user defined script.js
             new Promise(async (resolve) => {
                 const scriptPath = `${dirPath}/script.js`
                 const scripts = await fs.readFile(scriptPath)  
@@ -39,13 +41,18 @@ const server = createServer(async (req, res) => {
             })
             
         } else if (routesList.includes(req.url)) {
+            // define active directory and route
             route = routes[req.url].name
             dirPath = path.join(__dirname, `../web/pages/${route}`)
 
             const pagePath = `${dirPath}/${route}.html`
             
             const getContent = new Promise(async (resolve, rej) => {
-                const scripts = await fs.readFile(`${dirPath}/script.js`)  
+                // Allows for templating in html with js variables
+                const scriptPath = `${dirPath}/script.js`
+                const hasScripts = existsSync(scriptPath)
+
+                const scripts =  hasScripts ? await fs.readFile(`${dirPath}/script.js`) : ''
                 const pageContent =  await fs.readFile(pagePath, 'utf8')
                 resolve([scripts, pageContent])
             })
@@ -54,9 +61,14 @@ const server = createServer(async (req, res) => {
                 const func = scriptString(scripts, output)
                 const pageContent = eval(func)()
 
+                if (scripts === '') {
+                    res.end(`<div id='simply-app'>${pageContent}</div>`);
+                } else {
+                    res.write(`<div id='simply-app'>${pageContent}</div>`);
+                    res.end(`\n<script src="/script.js"></script>`)
+                }
+            
                 
-                res.write(`<div id='simply-app'>${pageContent}</div>`);
-                res.end(`\n<script src="/script.js"></script>`)
             })
         } 
 });
