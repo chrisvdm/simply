@@ -10,6 +10,8 @@ const path = require("node:path");
 const { createServer } = require('node:http');
 const { lutimesSync } = require('node:fs');
 
+const config = require('../web/config.json')
+
 const hostname = 'localhost';
 const port = 1820;
 
@@ -53,12 +55,16 @@ const server = createServer(async (req, res) => {
                 const hasScripts = existsSync(scriptPath)
 
                 const scripts =  hasScripts ? await fs.readFile(`${dirPath}/script.js`) : ''
+
                 const pageContent =  await fs.readFile(pagePath, 'utf8')
                 resolve([scripts, pageContent])
             })
 
             getContent.then(([scripts, output]) => {
-                const func = scriptString(scripts, output)
+                const appContext = defineAppContext({
+                    routes: routes[req.url]
+                })
+                const func = scriptString(scripts, output, appContext)
                 const pageContent = eval(func)()
 
                 if (scripts === '') {
@@ -78,13 +84,21 @@ server.listen(port, hostname, () => {
     console.log(`------------------------------------------------------`)
 });
 
+const defineAppContext = ({routes}) => {
+    return {
+        site: {...config},
+        page: {...routes}
+    }
+}
 
-const scriptString = (scripts, output) => {
+
+const scriptString = (scripts, output, context) => {
 
     // Removes html comments
     output = output.replace(/<\!--.*?-->/g, "");
 
     return `() => {
+        const appContext = ${JSON.stringify(context)}
         ${scripts}
         return (\`
             ${ output }
