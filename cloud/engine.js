@@ -19,6 +19,10 @@ const port = 1820;
 let route = ''
 let dirPath = ''
 
+const componentList = (async() => {(await fs.readdir(path.join(__dirname,'../web/components'), { withFileTypes: true }))
+.filter(dirent => dirent.isDirectory())
+.map(dirent => dirent.name)})()
+
 const server = createServer(async (req, res) => {
     res.statusCode = 200;
 
@@ -64,8 +68,14 @@ const server = createServer(async (req, res) => {
                 const appContext = defineAppContext({
                     routes: routes[req.url]
                 })
+
+                const newStuff = insertReusableComponents(output)
+                console.log(newStuff)
+
                 const func = scriptString(scripts, output, appContext)
                 const pageContent = eval(func)()
+
+              
 
                 if (scripts === '') {
                     res.end(`<div id='simply-app'>${pageContent}</div>`);
@@ -90,6 +100,16 @@ const defineAppContext = ({routes}) => {
         page: {...routes}
     }
 }
+
+const insertReusableComponents = (output) => {
+    console.log(componentList)
+}
+
+const getDirectories = async source =>
+    (await fs.readdir(source, { withFileTypes: true }))
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name)
+
 
 
 const scriptString = (scripts, output, context) => {
