@@ -15,6 +15,8 @@ const config = require('../web/config.json')
 const hostname = 'localhost';
 const port = 1820;
 
+const publicDir = path.join(__dirname,'./public')
+
 // route and dirPAth get defined  further down
 let route = ''
 let dirPath = ''
@@ -29,7 +31,11 @@ const server = createServer(async (req, res) => {
     const routes = await getRoutes()
     const routesList = Object.getOwnPropertyNames(routes)
 
+   let templateFile = await (await fs.readFile(`${publicDir}/index.html`)).toString()
+
     res.setHeader('Content-Type', 'text/html');
+
+    // Sort requests
   
         if (req.url === '/favicon.ico') {
             return
@@ -39,7 +45,8 @@ const server = createServer(async (req, res) => {
             // Fetches user defined script.js
             new Promise(async (resolve) => {
                 const scriptPath = `${dirPath}/script.js`
-                const scripts = await fs.readFile(scriptPath)  
+                const hasScripts = existsSync(scriptPath)
+                const scripts = hasScripts ? await fs.readFile(scriptPath) : ''
                 resolve(scripts)
             }).then(result => {
                 res.writeHead(200, { 'Content-Type': 'application/javascript' });
@@ -57,7 +64,6 @@ const server = createServer(async (req, res) => {
                 // Allows for templating in html with js variables
                 const scriptPath = `${dirPath}/script.js`
                 const hasScripts = existsSync(scriptPath)
-
                 const scripts =  hasScripts ? await fs.readFile(`${dirPath}/script.js`) : ''
 
                 const pageContent =  await fs.readFile(pagePath, 'utf8')
@@ -69,20 +75,23 @@ const server = createServer(async (req, res) => {
                     routes: routes[req.url]
                 })
 
-                const newStuff = insertReusableComponents(output)
-                console.log(newStuff)
+                // const newStuff = insertReusableComponents(output)
+                // console.log(newStuff)
 
                 const func = scriptString(scripts, output, appContext)
                 const pageContent = eval(func)()
 
-              
-
-                if (scripts === '') {
-                    res.end(`<div id='simply-app'>${pageContent}</div>`);
-                } else {
-                    res.write(`<div id='simply-app'>${pageContent}</div>`);
-                    res.end(`\n<script src="/script.js"></script>`)
-                }
+                templateFile = templateFile.replace(/<\!-- simply-page-content-->/g, pageContent);
+                res.write(templateFile)
+                res.end()
+                // if (scripts === '') {
+                //     res.end(`<div id='simply-app'>${pageContent}</div>`);
+                // } else {
+                //     res.write(`<div id='simply-app'>${pageContent}</div>`);
+                //     res.end(`\n<script src="/script.js"></script>`)
+                //     // res.write(data);
+                //     // res.end();
+                // }
             
                 
             })
