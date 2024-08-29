@@ -38,21 +38,22 @@ const server = createServer(async (req, res) => {
     // Sort requests
   
         if (req.url === '/favicon.ico') {
-            return
+            const favicon = await fs.readFile(path.join(__dirname, '/public/favicon.ico'))
+            res.writeHead(200, {'Content-Type': 'image/favicon'})
+            res.end(favicon)
         }
 
         if (req.url === '/script.js') {
             // Fetches user defined script.js
-            new Promise(async (resolve) => {
-                const scriptPath = `${dirPath}/script.js`
-                const hasScripts = existsSync(scriptPath)
-                const scripts = hasScripts ? await fs.readFile(scriptPath) : ''
-                resolve(scripts)
-            }).then(result => {
-                res.writeHead(200, { 'Content-Type': 'application/javascript' });
-                res.end(result);
-            })
-            
+            if(dirPath !== "") {
+                const scriptPath = path.join(dirPath, 'script.js');
+                if(existsSync(scriptPath)) {
+                    const scriptContent = await fs.readFile(scriptPath);
+                    res.writeHead(200, { 'Content-Type': 'application/javascript' });
+                    res.end(scriptContent); 
+                }  
+            }
+           
         } else if (routesList.includes(req.url)) {
             // define active directory and route
             route = routes[req.url].name
@@ -81,19 +82,14 @@ const server = createServer(async (req, res) => {
                 const func = scriptString(scripts, output, appContext)
                 const pageContent = eval(func)()
 
+                if(scripts) {
+                    templateFile = templateFile.replace(/<\!-- simply-script-tag -->/g, '<script src="/script.js"></script>')
+                }
+                
+
                 templateFile = templateFile.replace(/<\!-- simply-page-content-->/g, pageContent);
                 res.write(templateFile)
                 res.end()
-                // if (scripts === '') {
-                //     res.end(`<div id='simply-app'>${pageContent}</div>`);
-                // } else {
-                //     res.write(`<div id='simply-app'>${pageContent}</div>`);
-                //     res.end(`\n<script src="/script.js"></script>`)
-                //     // res.write(data);
-                //     // res.end();
-                // }
-            
-                
             })
         } 
 });
