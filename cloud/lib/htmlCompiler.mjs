@@ -26,19 +26,27 @@ export const htmlCompiler = async (dirPath, route, htmlTemp) => {
     let htmlOutput = rawContent
 
         // Allows for templating in html with js variables
-        if(existsSync(scriptPath)) {
 
-           const scripts = await fs.readFile(scriptPath)
+          
            const appContext = await defineAppContext()
 
            // Builds a function that returns a html string with variables
-           const func = scriptString(scripts, rawContent, appContext)
-            htmlOutput = eval(func)()
+           const funcString = await scriptString(scriptPath, rawContent, appContext)
+           const func = new Function(funcString);
+            htmlOutput = func()
 
-            if(scripts) {
-                htmlTemp = htmlTemp.replace(/<\!-- simply-script-tag -->/g, '<script src="/script.js"></script>')
+            if(existsSync(scriptPath)) {
+                // Add a global script tag to define appContext
+    htmlTemp = htmlTemp.replace(
+        /<\!-- simply-script-tag -->/g,
+        `<script>const appContext = ${JSON.stringify(appContext)};</script><script src="/script.js"></script>`
+    );
+            } else {
+                htmlTemp = htmlTemp.replace(
+                    /<\!-- simply-script-tag -->/g,
+                    `<script>const appContext = ${JSON.stringify(appContext)};</script>`
+                ); 
             }
-        }
 
         // Add route-specific CSS if exists
     if (existsSync(cssPath)) {
@@ -56,27 +64,30 @@ export const htmlCompiler = async (dirPath, route, htmlTemp) => {
         htmlTemp = htmlTemp.replace(/<\!-- simply-global-css-tag -->/g, '');
     }
 
-        // const componentList = await insertReusableComponents(pageContent)
-        // console.log("component List", componentList)
-
         htmlTemp = htmlTemp.replace(/<\!-- simply-page-content-->/g, htmlOutput);
 
         return htmlTemp
 }
 
-const scriptString = (scripts, output, context) => {
+const scriptString = async (scriptPath, output, context) => {
+    let scripts = ''
+    if(existsSync(scriptPath)) {
+        scripts = await fs.readFile(scriptPath)
+    }
 
     // Removes html comments
     output = output.replace(/<\!--.*?-->/g, "");
 
-    return `() => {
-        const appContext = ${JSON.stringify(context)}
+    // Safely serialize context using JSON.stringify
+    const contextString = JSON.stringify(context);
+
+    return `
+        const appContext = ${contextString};
         ${scripts}
-        return (\`
-            ${ output }
-            \`
-        )
-    }`
+        return \`
+            ${output}
+        \`;
+    `;
 }
 
 // Recursive function to replace custom component tags with their respective HTML content, including scripts and CSS
