@@ -21,6 +21,7 @@ const globalCssDir = path.join(srcDir, 'css');
 // route and dirPath get defined  further down
 let route = ''
 let dirPath = ''
+let urlThingy = ''
 
 const getDirPathForRoute = r => {
     return path.join(srcDir, `pages/${r}`)
@@ -94,8 +95,9 @@ const server = createServer(async (req, res) => {
             // define active directory and route
             route = pageRoutes[req.url].name
             dirPath = getDirPathForRoute(route)
+            urlThingy = req.url
 
-            const htmlContent = await htmlCompiler(dirPath, route, templateFile)
+            const htmlContent = await htmlCompiler(dirPath, route, templateFile,urlThingy)
 
             res.write(htmlContent)
             res.end()

@@ -13,7 +13,7 @@ const srcDir = path.join(__dirname, '../../web');
 // Limit the recursion depth to avoid infinite loops
 const MAX_RECURSION_DEPTH = 10;
 
-export const htmlCompiler = async (dirPath, route, htmlTemp) => {
+export const htmlCompiler = async (dirPath, route, htmlTemp, urlThingy) => {
     const htmlPath = path.join(dirPath,`${route}.html`)
     const scriptPath = path.join(dirPath, 'script.js')
     const cssPath = path.join(dirPath, 'styles.css'); 
@@ -28,7 +28,7 @@ export const htmlCompiler = async (dirPath, route, htmlTemp) => {
         // Allows for templating in html with js variables
 
           
-           const appContext = await defineAppContext()
+           const appContext = await defineAppContext(urlThingy)
 
            // Builds a function that returns a html string with variables
            const funcString = await scriptString(scriptPath, rawContent, appContext)

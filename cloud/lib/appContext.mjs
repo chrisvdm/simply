@@ -8,10 +8,12 @@ const globalData = {
     // You can add more global data here as needed
 };
 
-export const defineAppContext = async () => {
+export const defineAppContext = async (route) => {
     const pageRoutes = await routes();
+    console.log(route)
     return {
         site: { ...config },
+        page: {...pageRoutes[route]},
         routes: { ...pageRoutes },
         global: { ...globalData } // Add any additional global data here
     };
