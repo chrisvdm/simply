@@ -5,6 +5,6 @@ export const defineAppContext = async () => {
     const pageRoutes = await routes()
     return {
         site: {...config},
-        page: {...pageRoutes}
+        routes: {...pageRoutes}
     }
 }

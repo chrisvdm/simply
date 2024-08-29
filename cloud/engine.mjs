@@ -16,29 +16,48 @@ const __dirname = path.dirname(__filename);
 
 const publicDir = path.join(__dirname, './public');
 const srcDir = path.join(__dirname, '../web')
+const globalCssDir = path.join(srcDir, 'css'); 
 
 // route and dirPath get defined  further down
 let route = ''
 let dirPath = ''
 
+const getDirPathForRoute = r => {
+    return path.join(srcDir, `pages/${r}`)
+}
+
+const serveStaticFile = async (res, filePath, contentType) => {
+    if (existsSync(filePath)) {
+        const fileContent = await fs.readFile(filePath);
+        res.writeHead(200, { 'Content-Type': contentType });
+        res.end(fileContent);
+    } else {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('File not found');
+    }
+};
+
 const server = createServer(async (req, res) => {
     res.statusCode = 200;
 
     try {
-        const pageRoutes = await routes()
+        res.setHeader('Content-Type', 'text/html');
+
 
         // template files
         let templateFile = await (await fs.readFile(path.join(publicDir,'index.html'))).toString()
 
+        // get user defined routes configuration
+        const pageRoutes = await routes()
         const routesList = await Object.getOwnPropertyNames(pageRoutes)
 
-        res.setHeader('Content-Type', 'text/html');
 
         // Handle favicon
         if (req.url === '/favicon.ico') {
             const favicon = await fs.readFile(path.join(publicDir, 'favicon.ico'))
             res.writeHead(200, {'Content-Type': 'image/x-icon'})
             res.end(favicon)
+            return
         }
 
         // Handle script
@@ -50,16 +69,31 @@ const server = createServer(async (req, res) => {
                     const scriptContent = await fs.readFile(scriptPath);
                     res.writeHead(200, { 'Content-Type': 'application/javascript' });
                     res.end(scriptContent); 
+                    return
                 }  
             }
-           
         } 
+
+        // Handle CSS requests
+        if (req.url.endsWith('.css')) {
+            let cssPath;
+            if (req.url.startsWith('/css/')) {
+                // Global CSS file
+                cssPath = path.join(globalCssDir, req.url.replace('/css/', ''));
+            } else {
+                // Route/Component-specific CSS file
+                cssPath = path.join(srcDir, `pages/${route}`, req.url.split('/').pop());
+            }
+
+            await serveStaticFile(res, cssPath, 'text/css');
+            return;
+        }
         
         // Handle dynamic routes
         if (routesList.includes(req.url)) {
             // define active directory and route
             route = pageRoutes[req.url].name
-            dirPath = path.join(srcDir, `pages/${route}`)
+            dirPath = getDirPathForRoute(route)
 
             const htmlContent = await htmlCompiler(dirPath, route, templateFile)
 
