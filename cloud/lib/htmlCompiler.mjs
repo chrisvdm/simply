@@ -4,8 +4,13 @@ import { existsSync } from 'node:fs';
 import { defineAppContext } from './appContext.mjs';
 
 
-export const htmlCompiler = async (htmlContent, scriptPath, htmlTemp) => {
-    let htmlOutput = htmlContent
+export const htmlCompiler = async (dirPath, route, htmlTemp) => {
+    const htmlPath = path.join(dirPath,`${route}.html`)
+    const scriptPath = path.join(dirPath, 'script.js')
+
+    const rawContent =  await fs.readFile(htmlPath, 'utf8')
+
+    let htmlOutput = rawContent
 
         // Allows for templating in html with js variables
         if(existsSync(scriptPath)) {

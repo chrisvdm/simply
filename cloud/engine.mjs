@@ -17,29 +17,31 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, './public');
 const srcDir = path.join(__dirname, '../web')
 
-// route and dirPAth get defined  further down
+// route and dirPath get defined  further down
 let route = ''
 let dirPath = ''
 
 const server = createServer(async (req, res) => {
     res.statusCode = 200;
-    const pageRoutes = await routes()
 
-    // template files
-    let templateFile = await (await fs.readFile(`${publicDir}/index.html`)).toString()
+    try {
+        const pageRoutes = await routes()
 
-    const routesList = await Object.getOwnPropertyNames(pageRoutes)
+        // template files
+        let templateFile = await (await fs.readFile(path.join(publicDir,'index.html'))).toString()
 
-    res.setHeader('Content-Type', 'text/html');
+        const routesList = await Object.getOwnPropertyNames(pageRoutes)
 
-    // Sort requests
-  
+        res.setHeader('Content-Type', 'text/html');
+
+        // Handle favicon
         if (req.url === '/favicon.ico') {
-            const favicon = await fs.readFile(path.join(__dirname, '/public/favicon.ico'))
+            const favicon = await fs.readFile(path.join(publicDir, 'favicon.ico'))
             res.writeHead(200, {'Content-Type': 'image/x-icon'})
             res.end(favicon)
         }
 
+        // Handle script
         if (req.url === '/script.js') {
             // Fetches user defined script.js
             if(dirPath !== "") {
@@ -51,21 +53,31 @@ const server = createServer(async (req, res) => {
                 }  
             }
            
-        } else if (routesList.includes(req.url)) {
+        } 
+        
+        // Handle dynamic routes
+        if (routesList.includes(req.url)) {
             // define active directory and route
             route = pageRoutes[req.url].name
-            dirPath = path.join(srcDir, `/pages/${route}`)
+            dirPath = path.join(srcDir, `pages/${route}`)
 
-            const pagePath = path.join(dirPath,`/${route}.html`)
-            const scriptPath = `${dirPath}/script.js`
-
-            const rawContent =  await fs.readFile(pagePath, 'utf8')
-
-            const htmlContent = await htmlCompiler(rawContent, scriptPath, templateFile)
+            const htmlContent = await htmlCompiler(dirPath, route, templateFile)
 
             res.write(htmlContent)
             res.end()
+            return
         } 
+
+        // Handle 404 Not Found
+        const notFoundPage = await fs.readFile(path.join(publicDir, '404.html'));
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end(notFoundPage);
+
+    } catch (error) {
+        console.error('Error handling request:', error);
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Internal Server Error');
+    }
 });
 
 server.listen(port, hostname, () => {
