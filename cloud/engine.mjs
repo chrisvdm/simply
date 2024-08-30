@@ -17,6 +17,7 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, './public');
 const srcDir = path.join(__dirname, '../web')
 const globalCssDir = path.join(srcDir, 'css'); 
+const componentDir = path.join(srcDir, 'components');
 
 // route and dirPath get defined  further down
 let route = ''
@@ -42,8 +43,21 @@ const server = createServer(async (req, res) => {
     res.statusCode = 200;
 
     try {
-        res.setHeader('Content-Type', 'text/html');
+        // Serve component-specific JS files
+        if (req.url.startsWith('/components/') && req.url.endsWith('.js')) {
+            const componentJsPath = path.join(componentDir, req.url.replace('/components/', ''));
+            await serveStaticFile(res, componentJsPath, 'application/javascript');
+            return;
+        }
 
+        // Serve component-specific CSS files
+        if (req.url.startsWith('/components/') && req.url.endsWith('.css')) {
+            const componentCssPath = path.join(componentDir, req.url.replace('/components/', ''));
+            await serveStaticFile(res, componentCssPath, 'text/css');
+            return;
+        }
+
+        res.setHeader('Content-Type', 'text/html');
 
         // template files
         let templateFile = await (await fs.readFile(path.join(publicDir,'index.html'))).toString()
@@ -61,19 +75,32 @@ const server = createServer(async (req, res) => {
             return
         }
 
-        // Handle script
+        // Handle global script
         if (req.url === '/script.js') {
-            // Fetches user defined script.js
-            if(dirPath !== "") {
-                const scriptPath = path.join(dirPath, 'script.js');
-                if(existsSync(scriptPath)) {
-                    const scriptContent = await fs.readFile(scriptPath);
-                    res.writeHead(200, { 'Content-Type': 'application/javascript' });
-                    res.end(scriptContent); 
-                    return
-                }  
+            if (dirPath !== "") {
+                const scriptFiles = await fs.readdir(dirPath);
+                const jsFiles = scriptFiles.filter(file => file.endsWith('.js'));
+
+                if (jsFiles.length > 0) {
+                    for (const jsFile of jsFiles) {
+                        const scriptPath = path.join(dirPath, jsFile);
+                        if (existsSync(scriptPath)) {
+                            const scriptContent = await fs.readFile(scriptPath);
+                            res.writeHead(200, { 'Content-Type': 'application/javascript' });
+                            res.end(scriptContent);
+                            return;
+                        }
+                    }
+                }
             }
-        } 
+        }
+
+        // Handle page-specific JS files with non-specific names
+        if (req.url.startsWith('/pages/') && req.url.endsWith('.js')) {
+            const jsFilePath = path.join(srcDir, req.url); // Directly use the request URL to find the file
+            await serveStaticFile(res, jsFilePath, 'application/javascript');
+            return;
+        }
 
         // Handle CSS requests
         if (req.url.endsWith('.css')) {
