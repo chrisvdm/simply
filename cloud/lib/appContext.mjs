@@ -10,7 +10,6 @@ const globalData = {
 
 export const defineAppContext = async (route) => {
     const pageRoutes = await routes();
-    console.log(route)
     return {
         site: { ...config },
         page: {...pageRoutes[route]},

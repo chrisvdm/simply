@@ -26,8 +26,6 @@ export const htmlCompiler = async (dirPath, route, htmlTemp, urlThingy) => {
     let htmlOutput = rawContent
 
         // Allows for templating in html with js variables
-
-          
            const appContext = await defineAppContext(urlThingy)
 
            // Builds a function that returns a html string with variables
