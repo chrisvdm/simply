@@ -77,8 +77,7 @@ export const processComponents = async (template, htmlTemp) => {
                         // Ensure the props are defined before the actual script is run
                         htmlTemp = htmlTemp.replace('<!-- simply-component-script-tag -->', `${propsScriptTag}\n${scriptTag}\n<!-- simply-component-script-tag -->`);
                     }
-                }
-                
+                }  
             }
         }
     }
