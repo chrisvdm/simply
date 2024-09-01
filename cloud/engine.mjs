@@ -43,16 +43,22 @@ const server = createServer(async (req, res) => {
     res.statusCode = 200;
 
     try {
+
+         // Parse the incoming URL to separate the pathname and query parameters
+         const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+         const mainUrl = parsedUrl.pathname; // This is the main part of the URL
+         const queryParams = parsedUrl.searchParams; // This is the query parameters part
+ 
         // Serve component-specific JS files
-        if (req.url.startsWith('/components/') && req.url.endsWith('.js')) {
+        if (mainUrl.startsWith('/components/') && mainUrl.endsWith('.js')) {
             const componentJsPath = path.join(componentDir, req.url.replace('/components/', ''));
             await serveStaticFile(res, componentJsPath, 'application/javascript');
             return;
         }
 
         // Serve component-specific CSS files
-        if (req.url.startsWith('/components/') && req.url.endsWith('.css')) {
-            const componentCssPath = path.join(componentDir, req.url.replace('/components/', ''));
+        if (mainUrl.startsWith('/components/') && mainUrl.endsWith('.css')) {
+            const componentCssPath = path.join(componentDir, mainUrl.replace('/components/', ''));
             await serveStaticFile(res, componentCssPath, 'text/css');
             return;
         }
@@ -68,7 +74,7 @@ const server = createServer(async (req, res) => {
 
 
         // Handle favicon
-        if (req.url === '/favicon.ico') {
+        if (mainUrl === '/favicon.ico') {
             const favicon = await fs.readFile(path.join(publicDir, 'favicon.ico'))
             res.writeHead(200, {'Content-Type': 'image/x-icon'})
             res.end(favicon)
@@ -76,7 +82,7 @@ const server = createServer(async (req, res) => {
         }
 
         // Handle global script
-        if (req.url === '/script.js') {
+        if (mainUrl === '/script.js') {
             if (dirPath !== "") {
                 const scriptFiles = await fs.readdir(dirPath);
                 const jsFiles = scriptFiles.filter(file => file.endsWith('.js'));
@@ -96,33 +102,33 @@ const server = createServer(async (req, res) => {
         }
 
         // Handle page-specific JS files with non-specific names
-        if (req.url.startsWith('/pages/') && req.url.endsWith('.js')) {
-            const jsFilePath = path.join(srcDir, req.url); // Directly use the request URL to find the file
+        if (mainUrl.startsWith('/pages/') && mainUrl.endsWith('.js')) {
+            const jsFilePath = path.join(srcDir, mainUrl); // Directly use the request URL to find the file
             await serveStaticFile(res, jsFilePath, 'application/javascript');
             return;
         }
 
         // Handle CSS requests
-        if (req.url.endsWith('.css')) {
+        if (mainUrl.endsWith('.css')) {
             let cssPath;
-            if (req.url.startsWith('/css/')) {
+            if (mainUrl.startsWith('/css/')) {
                 // Global CSS file
-                cssPath = path.join(globalCssDir, req.url.replace('/css/', ''));
+                cssPath = path.join(globalCssDir, mainUrl.replace('/css/', ''));
             } else {
                 // Route/Component-specific CSS file
-                cssPath = path.join(srcDir, `pages/${route}`, req.url.split('/').pop());
+                cssPath = path.join(srcDir, `pages/${route}`, mainUrl.split('/').pop());
             }
 
             await serveStaticFile(res, cssPath, 'text/css');
             return;
         }
-        
+
         // Handle dynamic routes
-        if (routesList.includes(req.url)) {
+        if (routesList.includes(mainUrl)) {
             // define active directory and route
-            route = pageRoutes[req.url].name
+            route = pageRoutes[mainUrl].name
             dirPath = getDirPathForRoute(route)
-            urlThingy = req.url
+            urlThingy = mainUrl
 
             const htmlContent = await htmlCompiler(dirPath, route, templateFile,urlThingy)
 
@@ -134,6 +140,7 @@ const server = createServer(async (req, res) => {
         // Handle 404 Not Found
         const notFoundPage = await fs.readFile(path.join(publicDir, '404.html'));
         res.writeHead(404, { 'Content-Type': 'text/html' });
+        console.error("404: Check to make sure your routes are configured correctly. Routes must start with '/'")
         res.end(notFoundPage);
 
     } catch (error) {

@@ -9,15 +9,20 @@ const routes =  {
             name: 'home',
             title: 'Home',
             // preload: async () => {
-            //     const posts = await service.fetch.posts({ limit: 5 })
+            //     const posts = await action.fetch.posts({ limit: 5 })
             //     context['posts'] = posts
             // }
         },
-        // '/post': {
-        //     to: '/:id',
+        '/contact-us': {
+            to: '/contact-us',
+            name: 'contactUs',
+            title: 'Contact Us'
+        }
+        // '/:postId': {
+        //     to: '/:postId',
         //     // title: context.posts(params.id).title,
         //     // preload: async () => {
-        //     //     const post = await service.retrieve.post(id)
+        //     //     const post = await action.retrieve.post(id)
         //     //     context['post'] = post
         //     // }
         // }}
